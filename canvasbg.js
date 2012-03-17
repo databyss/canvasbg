@@ -40,23 +40,32 @@ function background() {
 	this.scrollFactor = {
 		x: 1, y: 1
 	};
+	this.gameWidth = function() {
+		return (this.image.width * this.scale);
+	};
+	this.gameHeight = function() {
+		return (this.image.height * this.scale);
+	};
 	this.draw = function(gameWorld, clearScreen) {
 		if(clearScreen) {
 			ctx.clearRect(0, 0, c.width, c.height);
 		}
 		if(this.image !== null) {
-			//console.log('drawing bg1');
-			var xPoint = 0 - (gameWorld.xOffset % this.image.width) - this.image.width; // replace by scroll and scrollFactor
-			var yPoint = 0 - (gameWorld.yOffset % this.image.height) - this.image.height;
+			var xPoint = 0 - (gameWorld.xOffset % this.gameWidth()) - this.gameWidth(); // replace by scroll and scrollFactor
+			var yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
 			
 			while(xPoint < c.width) {
 				while(yPoint < c.height) {
-					//console.log(xPoint + ', ' + yPoint);
-					ctx.drawImage(this.image, xPoint, yPoint);
-					yPoint += this.image.height;
+					// if image is too big, only draw to edge of canvas
+					if(xPoint + this.gameWidth() > c.width) {
+						ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
+					} else {
+						ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
+					}
+					yPoint += this.gameHeight();
 				}
-				yPoint = 0 - (gameWorld.yOffset % this.image.height) - this.image.height;
-				xPoint += this.image.width;
+				yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
+				xPoint += this.gameWidth();
 			}
 			//console.log('finished drawing bg1');
 		}
