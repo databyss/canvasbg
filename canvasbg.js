@@ -46,8 +46,8 @@ function background() {
 		}
 		if(this.image !== null) {
 			//console.log('drawing bg1');
-			var xPoint = 0; // replace by scroll and scrollFactor
-			var yPoint = 0;
+			var xPoint = 0 - (gameWorld.xOffset % this.image.width) - this.image.width; // replace by scroll and scrollFactor
+			var yPoint = 0 - (gameWorld.yOffset % this.image.height) - this.image.height;
 			
 			while(xPoint < c.width) {
 				while(yPoint < c.height) {
@@ -55,7 +55,7 @@ function background() {
 					ctx.drawImage(this.image, xPoint, yPoint);
 					yPoint += this.image.height;
 				}
-				yPoint = 0;
+				yPoint = 0 - (gameWorld.yOffset % this.image.height) - this.image.height;
 				xPoint += this.image.width;
 			}
 			//console.log('finished drawing bg1');
