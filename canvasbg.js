@@ -2,6 +2,8 @@ var exitFlag = false;
 var lastUpdate = null;
 var c, ctx;
 var bg1 = null; // element to hold background object // needs to be a game scope
+var bg2 = null; // element to hold background object // needs to be a game scope
+var bg3 = null; // element to hold background object // needs to be a game scope
 
 // Article: http://www.wired.com/gamelife/2012/03/rj-mical-gdc-speech
 
@@ -51,8 +53,8 @@ function background() {
 			ctx.clearRect(0, 0, c.width, c.height);
 		}
 		if(this.image !== null) {
-			var xPoint = 0 - (gameWorld.xOffset % this.gameWidth()) - this.gameWidth(); // replace by scroll and scrollFactor
-			var yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
+			var xPoint = 0 - ((gameWorld.xOffset * this.scrollFactor.x) % this.gameWidth()) - this.gameWidth(); // replace by scroll and scrollFactor
+			var yPoint = 0 - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - this.gameHeight();
 			
 			while(xPoint < c.width) {
 				while(yPoint < c.height) {
@@ -64,7 +66,7 @@ function background() {
 					}
 					yPoint += this.gameHeight();
 				}
-				yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
+				yPoint = 0 - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - this.gameHeight();
 				xPoint += this.gameWidth();
 			}
 			//console.log('finished drawing bg1');
@@ -86,6 +88,12 @@ function gameLoop() {
 		if(bg1 !== null) {
 			bg1.draw(world, true);
 		}
+		if(bg2 !== null) {
+			bg2.draw(world, false);
+		}
+		if(bg3 !== null) {
+			bg3.draw(world, false);
+		}
 
 		world.update();
 	} else {
@@ -104,6 +112,12 @@ $(function() {
 
 	// initialize vars
 	bg1 = new background();
+	bg2 = new background();
+	bg2.scrollFactor.x = 0.5;
+	bg2.scrollFactor.y = 0.5;
+	bg3 = new background();
+	bg3.scrollFactor.x = 0.25;
+	bg3.scrollFactor.y = 0.25;
 	
 	// debug
 	$("#gameCanvas").click(function(e){
@@ -128,11 +142,14 @@ function loadImages() {
 	var imageManager = new ImageLoader();
 	
 	imageManager.queueDownload('images/spacebg64x64.png');
+	imageManager.queueDownload('images/bgcloud.png');
+	imageManager.queueDownload('images/bgstars.png');
 	
 	imageManager.downloadAll(function() {
 		bg1.image = imageManager.getAsset('images/spacebg64x64.png');
+		bg2.image = imageManager.getAsset('images/bgcloud.png');
+		bg3.image = imageManager.getAsset('images/bgstars.png');
 		
-		bg1.draw(world, true);
 	});
 }
 
