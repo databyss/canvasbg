@@ -1,7 +1,7 @@
 var exitFlag = false;
 var lastUpdate = null;
 var c, ctx;
-var bg1 = null; // element to hold background object // needs to be a game scope
+var backgrounds = [null, null, null];
 
 // Article: http://www.wired.com/gamelife/2012/03/rj-mical-gdc-speech
 
@@ -41,30 +41,35 @@ function background() {
 		x: 1, y: 1
 	};
 	this.gameWidth = function() {
+		if(this.image === null) {
+			return 0;
+		}
 		return (this.image.width * this.scale);
 	};
 	this.gameHeight = function() {
+		if(this.image === null) {
+			return 0;
+		}
 		return (this.image.height * this.scale);
+	};
+	this.update = function(ms) {
+		
 	};
 	this.draw = function(gameWorld, clearScreen) {
 		if(clearScreen) {
 			ctx.clearRect(0, 0, c.width, c.height);
 		}
 		if(this.image !== null) {
-			var xPoint = 0 - (gameWorld.xOffset % this.gameWidth()) - this.gameWidth(); // replace by scroll and scrollFactor
-			var yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
+			var xPoint = 0 - ((gameWorld.xOffset * this.scrollFactor.x) % this.gameWidth()) - this.gameWidth(); // replace by scroll and scrollFactor
+			var yPoint = 0 - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - this.gameHeight();
 			
 			while(xPoint < c.width) {
 				while(yPoint < c.height) {
-					// if image is too big, only draw to edge of canvas
-					if(xPoint + this.gameWidth() > c.width) {
-						ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
-					} else {
-						ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
-					}
+					//TODO: if image is too big, only draw to edge of canvas
+					ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
 					yPoint += this.gameHeight();
 				}
-				yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
+				yPoint = 0 - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - this.gameHeight();
 				xPoint += this.gameWidth();
 			}
 			//console.log('finished drawing bg1');
@@ -83,8 +88,15 @@ function gameLoop() {
 		if(!lastUpdate) {
 			lastUpdate = newUpdate;
 		}
-		if(bg1 !== null) {
-			bg1.draw(world, true);
+		for(var i = 0; i < backgrounds.length; i++) {
+			if(backgrounds[i] !== null) {
+				if(i === 0) {
+					// clear bg on first one
+					backgrounds[i].draw(world, true);
+				} else {
+					backgrounds[i].draw(world, false);
+				}
+			}
 		}
 
 		world.update();
@@ -102,8 +114,20 @@ $(function() {
 	window.addEventListener('keydown', handleKeyDown, true);
 	window.addEventListener('keyup', handleKeyUp, true);
 
-	// initialize vars
-	bg1 = new background();
+	// initizlise background objects
+	backgrounds[0] = new background();
+	backgrounds[0].scrollFactor.x = 0.25;
+	backgrounds[0].scrollFactor.y = 0.25;
+	backgrounds[0].scale = 2;
+
+	backgrounds[1] = new background();
+	backgrounds[1].scrollFactor.x = 0.5;
+	backgrounds[1].scrollFactor.y = 0.5;
+	backgrounds[1].scale = 0.8;
+
+	backgrounds[2] = new background();
+	backgrounds[2].scrollFactor.x = 1.5;
+	backgrounds[2].scrollFactor.y = 1.5;
 	
 	// debug
 	$("#gameCanvas").click(function(e){
@@ -128,11 +152,14 @@ function loadImages() {
 	var imageManager = new ImageLoader();
 	
 	imageManager.queueDownload('images/spacebg64x64.png');
+	imageManager.queueDownload('images/bgcloud.png');
+	imageManager.queueDownload('images/bgstars.png');
 	
 	imageManager.downloadAll(function() {
-		bg1.image = imageManager.getAsset('images/spacebg64x64.png');
+		backgrounds[0].image = imageManager.getAsset('images/spacebg64x64.png');
+		backgrounds[1].image = imageManager.getAsset('images/bgcloud.png');
+		backgrounds[2].image = imageManager.getAsset('images/bgstars.png');
 		
-		bg1.draw(world, true);
 	});
 }
 
