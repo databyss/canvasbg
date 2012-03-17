@@ -1,44 +1,34 @@
 var exitFlag = false;
 var lastUpdate = null;
 var c, ctx;
+var bg1 = null; // element to hold background object // needs to be a game scope
 
 // Article: http://www.wired.com/gamelife/2012/03/rj-mical-gdc-speech
 
-var clickDebug =  'Click Debug:';
-clickDebug += '<table><tr><td>click</td><td>(0,0)</td></tr>';
-clickDebug += '<tr><td>canvas</td><td>(0,0)</td></tr>';
-clickDebug += '<tr><td>game</td><td>(0,0)</td></tr></table>';
-
-var inputKeys = { // defines key codes used for input
-	up: 87, // W
-	right: 68, // D
-	left: 65, // A
-	down: 83, // S
-	quit: 27 // ESC
-}
-
-
-// input state object
-var input = {
-	left: false,
-	up: false,
-	down: false,
-	right: false,
-	quit: false,
-	debugOutput: function() {
-		var debugOutput = $('#gameDebug').html() + '<br />Input Debug:';
-		debugOutput += '<table><tr><td>up</td><td>(' + this.up + ')</td></tr>';
-		debugOutput += '<table><tr><td>down</td><td>(' + this.down + ')</td></tr>';
-		debugOutput += '<tr><td>left</td><td>(' + this.left + ')</td></tr>';
-		debugOutput += '<tr><td>right</td><td>(' + this.right + ')</td></tr>';
-		debugOutput += '<tr><td>quit</td><td>(' + this.quit + ')</td></tr></table>';
-		$('#gameDebug').html(debugOutput);
-	}	
-}
 
 var world = {
-	x: 0,
-	y: 0
+	xOffset: 0,
+	yOffset: 0,
+	speed: 10,
+	update: function() {
+		if(input.up) {
+			this.yOffset += this.speed;
+		}
+		if(input.down) {
+			this.yOffset -= this.speed;
+		}
+		if(input.left) {
+			this.xOffset -= this.speed;
+		}
+		if(input.right) {
+			this.xOffset += this.speed;
+		}
+	},
+	debugOutput: function() {
+		var debugOutput = $('#gameDebug').html() + '<br />World Debug:';
+		debugOutput += '<table><tr><td>up</td><td>(' + this.xOffset + ', ' + this.yOffset + ')</td></tr></table>';
+		$('#gameDebug').html(debugOutput);
+	}
 }
 
 function background() {
@@ -48,17 +38,102 @@ function background() {
 		x: 0, y: 0
 	};
 	this.scrollFactor = {
-		x: 0, y: 0
+		x: 1, y: 1
 	};
+	this.gameWidth = function() {
+		return (this.image.width * this.scale);
+	};
+	this.gameHeight = function() {
+		return (this.image.height * this.scale);
+	};
+	this.draw = function(gameWorld, clearScreen) {
+		if(clearScreen) {
+			ctx.clearRect(0, 0, c.width, c.height);
+		}
+		if(this.image !== null) {
+			var xPoint = 0 - (gameWorld.xOffset % this.gameWidth()) - this.gameWidth(); // replace by scroll and scrollFactor
+			var yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
+			
+			while(xPoint < c.width) {
+				while(yPoint < c.height) {
+					// if image is too big, only draw to edge of canvas
+					if(xPoint + this.gameWidth() > c.width) {
+						ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
+					} else {
+						ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
+					}
+					yPoint += this.gameHeight();
+				}
+				yPoint = 0 - (gameWorld.yOffset % this.gameHeight()) - this.gameHeight();
+				xPoint += this.gameWidth();
+			}
+			//console.log('finished drawing bg1');
+		}
+	}
 }
 
-function setMapBG() {
-	ctx.clearRect(0, 0, c.width, c.height);
-	//ctx.fillStyle = '#ffffff';
-	//ctx.fillRect(0, 0, c.width, c.height);
-	if(bgImage !== null) {
-		//ctx.drawImage(bgImage, world.xOffset, world.yOffset, c.width, c.height, 0, 0, c.width, c.height);
+function gameLoop() {
+	var newUpdate = new Date();
+					
+	$('#gameDebug').html(clickDebug);		
+	input.debugOutput();
+	world.debugOutput();
+	if(!exitFlag) {
+		drawDebugGrid(); // 'crosshair' or 'grid'
+		if(!lastUpdate) {
+			lastUpdate = newUpdate;
+		}
+		if(bg1 !== null) {
+			bg1.draw(world, true);
+		}
+
+		world.update();
+	} else {
 	}
+	lastUpdate = newUpdate;				 	
+}
+
+$(function() {
+	// on ready
+	setupCanvas();
+	loadImages(); //TODO: async, need to wait for finish before moving on.
+	
+	// add listeners for keyboard input
+	window.addEventListener('keydown', handleKeyDown, true);
+	window.addEventListener('keyup', handleKeyUp, true);
+
+	// initialize vars
+	bg1 = new background();
+	
+	// debug
+	$("#gameCanvas").click(function(e){
+		var gc = $("#gameCanvas");
+	    var x = e.pageX - gc.offset().left;
+	    var y = e.pageY - gc.offset().top;
+	    
+		clickDebug =  'Click Debug:';
+		clickDebug += '<table><tr><td>click</td><td>(' + e.pageX + ', ' + e.pageY + ')</td></tr>';
+		clickDebug += '<tr><td>canvas</td><td>(' + Math.round(x) + ', ' + Math.round(y) + ')</td></tr>';
+		clickDebug += '<tr><td>game</td><td>(' + Math.round(x) + ', ' + (c.height - Math.round(y)) + ')</td></tr></table>';
+	});
+
+	(function animloop(){
+      requestAnimFrame(animloop);
+      gameLoop();
+    })();
+});
+
+function loadImages() {
+	// preload images	
+	var imageManager = new ImageLoader();
+	
+	imageManager.queueDownload('images/spacebg64x64.png');
+	
+	imageManager.downloadAll(function() {
+		bg1.image = imageManager.getAsset('images/spacebg64x64.png');
+		
+		bg1.draw(world, true);
+	});
 }
 
 function handleKeyDown(evt) {
@@ -159,34 +234,6 @@ function drawDebugGrid(method) {
 	}
 }
 
-function gameLoop() {
-	var newUpdate = new Date();
-					
-	$('#gameDebug').html(clickDebug);		
-	input.debugOutput();
-	if(!exitFlag) {
-		setMapBG();
-		drawDebugGrid(); // 'crosshair' or 'grid'
-		if(!lastUpdate) {
-			lastUpdate = newUpdate;
-		}
-	} else {
-		//player.debugOutput();
-	}
-	lastUpdate = newUpdate;				 	
-}
-
-function loadImages() {
-	// preload images	
-	var imageManager = new ImageLoader();
-	
-	imageManager.queueDownload('images/space.png');
-	
-	imageManager.downloadAll(function() {
-		bgImage = imageManager.getAsset('images/spacebg64x64.png');
-	});
-}
-
 function setupCanvas() {
 	// define graphics contexts
 	c = document.getElementById("gameCanvas");
@@ -203,35 +250,36 @@ function setupCanvas() {
 
 }
 
-$(function() {
-	// on ready
-	setupCanvas();
-	loadImages(); //TODO: async, need to wait for finish before moving on.
-	
-	// add listeners for keyboard input
-	window.addEventListener('keydown', handleKeyDown, true);
-	window.addEventListener('keyup', handleKeyUp, true);
-	
-	// debug
-	$("#gameCanvas").click(function(e){
-		var gc = $("#gameCanvas");
-	    var x = e.pageX - gc.offset().left;
-	    var y = e.pageY - gc.offset().top;
-	    var map = level.toMapCoord({x: x, y: c.height - y});
-	    
-		clickDebug =  'Click Debug:';
-		clickDebug += '<table><tr><td>click</td><td>(' + e.pageX + ', ' + e.pageY + ')</td></tr>';
-		clickDebug += '<tr><td>canvas</td><td>(' + Math.round(x) + ', ' + Math.round(y) + ')</td></tr>';
-		clickDebug += '<tr><td>game</td><td>(' + Math.round(x) + ', ' + (c.height - Math.round(y)) + ')</td></tr>';
-		clickDebug += '<tr><td>map</td><td>(' + Math.round(map.x) + ', ' + Math.round(map.y) + ')</td></tr>';
-		clickDebug += '<tr><td>color</td><td>(' + level.colorAt(map.x, map.y) + ')</td></tr></table>';
-	});
+var clickDebug =  'Click Debug:';
+clickDebug += '<table><tr><td>click</td><td>(0,0)</td></tr>';
+clickDebug += '<tr><td>canvas</td><td>(0,0)</td></tr>';
+clickDebug += '<tr><td>game</td><td>(0,0)</td></tr></table>';
 
-	(function animloop(){
-      requestAnimFrame(animloop);
-      gameLoop();
-    })();
-});
+var inputKeys = { // defines key codes used for input
+	up: 87, // W
+	right: 68, // D
+	left: 65, // A
+	down: 83, // S
+	quit: 27 // ESC
+}
+
+// input state object
+var input = {
+	left: false,
+	up: false,
+	down: false,
+	right: false,
+	quit: false,
+	debugOutput: function() {
+		var debugOutput = $('#gameDebug').html() + '<br />Input Debug:';
+		debugOutput += '<table><tr><td>up</td><td>(' + this.up + ')</td></tr>';
+		debugOutput += '<table><tr><td>down</td><td>(' + this.down + ')</td></tr>';
+		debugOutput += '<tr><td>left</td><td>(' + this.left + ')</td></tr>';
+		debugOutput += '<tr><td>right</td><td>(' + this.right + ')</td></tr>';
+		debugOutput += '<tr><td>quit</td><td>(' + this.quit + ')</td></tr></table>';
+		$('#gameDebug').html(debugOutput);
+	}	
+}
 
 //BEGIN RAF SHIM
 // reference: http://paulirish.com/2011/requestanimationframe-for-smart-animating/
