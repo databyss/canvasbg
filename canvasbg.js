@@ -40,6 +40,9 @@ function background() {
 	this.scrollFactor = {
 		x: 1, y: 1
 	};
+	this.velocity = {
+		x: 0, y: 0
+	};
 	this.gameWidth = function() {
 		if(this.image === null) {
 			return 0;
@@ -53,15 +56,21 @@ function background() {
 		return (this.image.height * this.scale);
 	};
 	this.update = function(ms) {
+		this.scroll.x += this.velocity.x * (ms / 1000);
+		this.scroll.y += this.velocity.y * (ms / 1000);
+		if(this.scroll.x > this.gameWidth()) this.scroll.x = 0;
+		if(this.scroll.x < 0) this.scroll.x = this.gameWidth() - 1;
 		
+		if(this.scroll.y > this.gameHeight()) this.scroll.y = 0;
+		if(this.scroll.y < 0) this.scroll.y = this.gameHeight() - 1;
 	};
 	this.draw = function(gameWorld, clearScreen) {
 		if(clearScreen) {
 			ctx.clearRect(0, 0, c.width, c.height);
 		}
 		if(this.image !== null) {
-			var xPoint = 0 - ((gameWorld.xOffset * this.scrollFactor.x) % this.gameWidth()) - this.gameWidth(); // replace by scroll and scrollFactor
-			var yPoint = 0 - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - this.gameHeight();
+			var xPoint = this.scroll.x - ((gameWorld.xOffset * this.scrollFactor.x) % this.gameWidth()) - (this.gameWidth() * 2); // replace by scroll and scrollFactor
+			var yPoint = this.scroll.y - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - (this.gameHeight() * 2);
 			
 			while(xPoint < c.width) {
 				while(yPoint < c.height) {
@@ -69,7 +78,7 @@ function background() {
 					ctx.drawImage(this.image, xPoint, yPoint, this.gameWidth(), this.gameHeight());
 					yPoint += this.gameHeight();
 				}
-				yPoint = 0 - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - this.gameHeight();
+				yPoint = this.scroll.y - ((gameWorld.yOffset * this.scrollFactor.y) % this.gameHeight()) - (this.gameHeight() * 2);
 				xPoint += this.gameWidth();
 			}
 			//console.log('finished drawing bg1');
@@ -90,6 +99,7 @@ function gameLoop() {
 		}
 		for(var i = 0; i < backgrounds.length; i++) {
 			if(backgrounds[i] !== null) {
+				backgrounds[i].update(newUpdate - lastUpdate);
 				if(i === 0) {
 					// clear bg on first one
 					backgrounds[i].draw(world, true);
@@ -124,10 +134,13 @@ $(function() {
 	backgrounds[1].scrollFactor.x = 0.5;
 	backgrounds[1].scrollFactor.y = 0.5;
 	backgrounds[1].scale = 0.8;
+	backgrounds[1].velocity.x = -10;
 
 	backgrounds[2] = new background();
 	backgrounds[2].scrollFactor.x = 1.5;
 	backgrounds[2].scrollFactor.y = 1.5;
+	backgrounds[2].velocity.x = 200;
+	backgrounds[2].velocity.y = -200;
 	
 	// debug
 	$("#gameCanvas").click(function(e){
